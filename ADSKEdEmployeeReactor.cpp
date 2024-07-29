@@ -75,6 +75,9 @@ void ADSKEdEmployeeReactor::commandWillStart(const ACHAR* cmdStr)
 	if (_tcscmp(cmdStr, _T("MOVE")) && _tcscmp(cmdStr, _T("ROTATE")) && _tcscmp(cmdStr, _T("STRETCH")) && _tcscmp(cmdStr, _T("SCALE")) && _tcscmp(cmdStr, _T("GRIP_STRETCH"))) {
 		return; // 
 	}
+
+	acutPrintf(_T("EdEmployeeReactor::commandWillStart editCommand")); // log
+	
 	// If it is one of the monitored commands, set m_editCommand = true; and m_doRepositioning = false;
 	DocVars.docData().m_editCommand = true;
 	DocVars.docData().m_doRepositioning = false;
@@ -88,6 +91,10 @@ void ADSKEdEmployeeReactor::commandEnded(const ACHAR* cmdStr)
 	// If the command being monitored is not a monitored command from the above list of commands then m_editCommand == false; simply return. 
 	if (!DocVars.docData().m_editCommand)
 		return;
+
+	acutPrintf(_T("EdEmployeeReactor::commandEnded doRepositioning")); // log
+
+
 	// One of our monitored teams is active. Reset m_editCommand to false
 	DocVars.docData().m_editCommand = false;
 	// Set m_doRepositioning to true and start repositioning the moved objects 

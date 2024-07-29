@@ -39,10 +39,9 @@ public:
 	// Members
 	bool m_editCommand;
 	bool m_doRepositioning;
+	ADSKDbEmployeeReactor* m_DbEmployeeReactor;
 	AcDbObjectIdArray m_changedObjects;
 	AcGePoint3dArray m_employeePositions;
-
-	ADSKDbEmployeeReactor* m_DbEmployeeReactor;
 } ;
 
 void detachAllEmployeeReactors();

@@ -81,14 +81,6 @@ public:
 	}
 	
 	static void AsdkStep07_CREATE(void) {
-		//AcDbObjectId layerId;
-		//if (createLayer(_T("USER"), layerId) != Acad::eOk) {
-		//	acutPrintf(_T("\nERROR: Couldn't create layer record."));
-		//	return;
-		//}
-		//applyCurDwgLayerTableChanges(); // call the ObjectARX global function applyCurDwgLayerTableChanges(). This function will force AutoCAD to update itself to use any changes made to any layer table records in the drawing currently in the AutoCAD editor. 
-		//acutPrintf(_T("\nLayer USER successfully created"));
-		// Create a new block definition named "EMPLOYEE"
 		if (createBlockRecord(_T("EMPLOYEE")) != Acad::eOk) {
 			acutPrintf(_T("\nERROR: Couldn't create block record"));
 			return;

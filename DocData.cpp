@@ -143,13 +143,19 @@ AcApDataManager<CDocData> DocVars ;
 
 //-----------------------------------------------------------------------------
 //----- Implementation of the document data class.
-CDocData::CDocData () {
+CDocData::CDocData () : m_editCommand(false), m_doRepositioning(false), m_DbEmployeeReactor(nullptr) {
+	attachEmployeeReactorToAllEmployee(true);
 }
 
 //-----------------------------------------------------------------------------
 CDocData::CDocData (const CDocData &data) {
+	m_editCommand = false;
+	m_doRepositioning = false;
+	m_DbEmployeeReactor = nullptr;
 }
 
 //-----------------------------------------------------------------------------
 CDocData::~CDocData () {
+	if (m_DbEmployeeReactor) 
+		delete m_DbEmployeeReactor;
 }

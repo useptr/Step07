@@ -26,6 +26,7 @@
 #include "ADSKDbEmployeeReactor.h"
 #include "Tchar.h" // _T
 #include "ADSKEmployeeReactor.h"
+#include "utilities.h"
 extern ADSKEmployeeReactor* pEmployeeReactor;
 //-----------------------------------------------------------------------------
 ACRX_CONS_DEFINE_MEMBERS(ADSKDbEmployeeReactor, AcDbDatabaseReactor, 1)
@@ -65,35 +66,6 @@ bool ADSKDbEmployeeReactor::IsAttached () const {
 	return (mpDatabase != NULL) ;
 }
 
-static void
-printObj(const AcDbObject* pObj)
-{
-	if (pObj == NULL) {
-		acutPrintf(_T("(NULL)"));
-		return;
-	}
-
-	AcDbHandle objHand;
-	TCHAR  handbuf[17];
-
-	// Get the handle as a string
-	//
-	pObj->getAcDbHandle(objHand);
-	objHand.getIntoAsciiBuffer(handbuf);
-
-	acutPrintf(
-		_T("\n   (class==%s, handle==%s, id==%lx, db==%lx)"),
-		pObj->isA()->name(), handbuf,
-		pObj->objectId().asOldId(), pObj->database());
-}
-
-static void
-printDbEvent(const AcDbObject* pObj, const TCHAR* pEvent)
-{
-	acutPrintf(_T("  Event: AcDbDatabaseReactor::%s "), pEvent);
-	printObj(pObj);
-}
-
 void ADSKDbEmployeeReactor::objectAppended(const AcDbDatabase* dwg, const AcDbObject* dbObj)
 {
 	// Check if the appended object is an AcDbBlockReference. If not return
@@ -101,7 +73,9 @@ void ADSKDbEmployeeReactor::objectAppended(const AcDbDatabase* dwg, const AcDbOb
 	if (nullptr == pInsert)
 		return;
 
-	printDbEvent(dbObj, _T("objectAppended"));
+	//printDbEvent(dbObj, _T("objectAppended")); // log
+	acutPrintf(_T(" AcDbDatabaseReactor::objectAppended"));
+	//printObj(dbObj);
 
 	// Get the block table record of the reference
 	AcDbObjectId blockId = pInsert->blockTableRecord();

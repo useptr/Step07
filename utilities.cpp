@@ -3,96 +3,6 @@
 #include <numbers>
 
 #include "Tchar.h" // _T
-//
-// Create a new layer or return the ObjectId if it already exists
-//
-// In :
-// const TCHAR* layerName : layer name
-// Out :
-// AcDbObjectId& layerId : ObjectId of the created or existing layer
-//
-Acad::ErrorStatus createLayer(const TCHAR* layerName, AcDbObjectId& layerId) {
-
-	layerId = AcDbObjectId::kNull;
-	// get the current working database acdbHostApplicationServices()->workingDatabase())
-	// Get the layer table from the current working database (AcDbLayerTable, AcDbDatabase::getLayerTable())
-	AcDbLayerTable* pLayerTable;
-	Acad::ErrorStatus es = acdbHostApplicationServices()->workingDatabase()->getLayerTable(pLayerTable);
-	if (es != Acad::eOk) {
-		acutPrintf(_T("\nERROR: Cannot open AcDbLayerTable"), layerName);
-		return es;
-	}
-	// Check to see if a layer of the same name already exists(AcDbLayerTable::getAt()) If it already exists, get it's object ID and return it
-	es = pLayerTable->getAt(layerName, layerId, Adesk::kFalse);
-	if (es == Acad::eOk) {
-		acutPrintf(_T("\nINFO: Layer with name %s already exist"), layerName);
-		Acad::ErrorStatus es2 = pLayerTable->close();
-		if (es2 != Acad::eOk) {
-			acrx_abort(_T("\nApp failed to close AcDbLayerTable. ERROR: %s"),
-				acadErrorStatusText(es2));
-		}
-		return es;
-	}
-	// If the layer does not already exist then we have to create it and add it to the layer table
-	AcDbLayerTableRecord* pLayerTableRecord = new AcDbLayerTableRecord;
-	if (nullptr == pLayerTableRecord) { // release resources
-		Acad::ErrorStatus es2 = pLayerTable->close();
-		if (es2 != Acad::eOk) {
-			acrx_abort(_T("\nApp failed to close AcDbLayerTable. ERROR: %s"),
-				acadErrorStatusText(es2));
-		}
-		return Acad::eOutOfMemory;
-	}
-
-	es = pLayerTableRecord->setName(layerName);
-	if (es != Acad::eOk) { // release resources
-		acutPrintf(_T("\nERROR: AcDbLayerTableRecord setName '%s'"), layerName);
-		delete pLayerTableRecord;
-		Acad::ErrorStatus es2 = pLayerTable->close();
-		if (es2 != Acad::eOk) {
-			acrx_abort(_T("\nApp failed to close AcDbLayerTable. ERROR: %s"),
-				acadErrorStatusText(es2));
-		}
-		return es;
-	}
-
-	es = pLayerTable->upgradeOpen();
-	if (es != Acad::eOk) { // release resources
-		acutPrintf(_T("\nERROR: AcDbLayerTableRecord upgradeOpen '%s'"), layerName);
-		delete pLayerTableRecord;
-		Acad::ErrorStatus es2 = pLayerTable->close();
-		if (es2 != Acad::eOk) {
-			acrx_abort(_T("\nApp failed to close AcDbLayerTable. ERROR: %s"),
-				acadErrorStatusText(es2));
-		}
-		return es;
-	}
-
-	es = pLayerTable->add(layerId, pLayerTableRecord);
-	if (es != Acad::eOk) { // release resources
-		acutPrintf(_T("\nERROR: AcDbLayerTableRecord add '%s'"), layerName);
-		delete pLayerTableRecord;
-		Acad::ErrorStatus es2 = pLayerTable->close();
-		if (es2 != Acad::eOk) {
-			acrx_abort(_T("\nApp failed to close AcDbLayerTable. ERROR: %s"),
-				acadErrorStatusText(es2));
-		}
-		return es;
-	}
-
-	es = pLayerTableRecord->close();
-	if (es != Acad::eOk) { // release resources
-		acrx_abort(_T("\nApp failed to close AcDbLayerTableRecord with name %s. ERROR: %s"), layerName,
-			acadErrorStatusText(es));
-	}
-	es = pLayerTable->close();
-	if (es != Acad::eOk) { // release resources, I hate this api
-		acrx_abort(_T("\nApp failed to close AcDbLayerTable. ERROR: %s"),
-			acadErrorStatusText(es));
-	}
-	return Acad::eOk;
-}
-
 // 
 // Create a new block table record and add the entities of the employee to it 
 // 
@@ -180,4 +90,31 @@ Acad::ErrorStatus createBlockRecord(const TCHAR* name) { // TODO error checking
 
 	pBlockTableRec->close();
 	return Acad::eOk;
+}
+
+void printDbEvent(const AcDbObject* pObj, const TCHAR* pEvent)
+{
+	acutPrintf(_T("  Event: AcDbDatabaseReactor::%s "), pEvent);
+	printObj(pObj);
+}
+
+void printObj(const AcDbObject* pObj)
+{
+	if (pObj == NULL) {
+		acutPrintf(_T("(NULL)"));
+		return;
+	}
+
+	AcDbHandle objHand;
+	TCHAR  handbuf[17];
+
+	// Get the handle as a string
+	//
+	pObj->getAcDbHandle(objHand);
+	objHand.getIntoAsciiBuffer(handbuf);
+
+	acutPrintf(
+		_T("\n   (class==%s, handle==%s, id==%lx, db==%lx)"),
+		pObj->isA()->name(), handbuf,
+		pObj->objectId().asOldId(), pObj->database());
 }
