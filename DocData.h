@@ -37,11 +37,11 @@ public:
 	CDocData (const CDocData &data) ;
 	~CDocData () ;
 	// Members
-	bool m_editCommand;
-	bool m_doRepositioning;
-	ADSKDbEmployeeReactor* m_DbEmployeeReactor;
-	AcDbObjectIdArray m_changedObjects;
-	AcGePoint3dArray m_employeePositions;
+	bool m_bEditCommand;
+	bool m_bDoRepositioning;
+	ADSKDbEmployeeReactor* m_pDbEmployeeReactor;
+	AcDbObjectIdArray m_aChangedObjects;
+	AcGePoint3dArray m_aEmployeePositions;
 } ;
 
 void detachAllEmployeeReactors();

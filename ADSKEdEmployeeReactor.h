@@ -66,6 +66,6 @@ public:
 	virtual bool IsAttached () const ;
 
 	// Overrided AcEditorReactor methods
-	virtual void commandWillStart(const ACHAR* cmdStr);
-	virtual void commandEnded(const ACHAR* cmdStr);
+	virtual void commandWillStart(const ACHAR* aszCmdStr);
+	virtual void commandEnded(const ACHAR* aszCmdStr);
 } ;

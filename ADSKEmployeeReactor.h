@@ -60,7 +60,7 @@ public:
 	virtual ~ADSKEmployeeReactor () ;
 
 	// Overrided AcDbObjectReactor methods
-	void openedForModify(const AcDbObject* dbObj) override;
+	void openedForModify(const AcDbObject* pDbObj) override;
 } ;
 
 #ifdef S7_MODULE

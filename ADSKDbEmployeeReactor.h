@@ -68,7 +68,7 @@ public:
 	virtual AcDbDatabase *Subject () const ;
 	virtual bool IsAttached () const ;
 
-	virtual void objectAppended(const AcDbDatabase* dwg, const AcDbObject* dbObj);
+	virtual void objectAppended(const AcDbDatabase* apDwg, const AcDbObject* apDbObj);
 } ;
 
 #ifdef S7_MODULE

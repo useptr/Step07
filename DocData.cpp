@@ -24,100 +24,62 @@
 //-----------------------------------------------------------------------------
 #include "StdAfx.h"
 #include "Tchar.h"
+#include <memory>
 #include "ADSKEmployeeReactor.h"
-extern ADSKEmployeeReactor* pEmployeeReactor;
+extern std::unique_ptr<ADSKEmployeeReactor> g_pEmployeeReactor;
 
 Acad::ErrorStatus attachEmployeeReactorToAllEmployee(bool attach)
 {
-	// Get the block table
-	AcDbBlockTable* pBlockTable;
-	Acad::ErrorStatus es = acdbHostApplicationServices()->workingDatabase()->getBlockTable(pBlockTable);
-	if (es != Acad::eOk)
-		return es;
 	// pBlockTable successfully opened
 	// Get the model space record
-	AcDbBlockTableRecord* pBlockTableRecord;
-	es = pBlockTable->getAt(ACDB_MODEL_SPACE, pBlockTableRecord);
-	if (es != Acad::eOk) { // release resources
-		Acad::ErrorStatus es2 = pBlockTable->close();
-		if (es2 != Acad::eOk) {
-			acrx_abort(_T("\nApp failed to close BlockTable. Error: %s"), acadErrorStatusText(es2));
-		}
-		return es;
-	}
-	// pBlockTableRecord successfully opened
-	es = pBlockTable->close();
-	if (es != Acad::eOk) { // release BlockTable
-		acrx_abort(_T("\nApp failed to close BlockTable. Error: %s"), acadErrorStatusText(es));
+	AcDbBlockTableRecordPointer pBlockTableRecord(acdbHostApplicationServices()->workingDatabase()->currentSpaceId());
+	if (pBlockTableRecord.openStatus() != Acad::eOk) {
+		acutPrintf(_T("\nERROR: Cannot open BlockTableRecord"));
+		return pBlockTableRecord.openStatus();
 	}
 	// Get a block table record iterator
 	AcDbBlockTableRecordIterator* pIt;
-	es = pBlockTableRecord->newIterator(pIt);
-	if (es != Acad::eOk) { // release resources
-		Acad::ErrorStatus es2 = pBlockTableRecord->close();
-		if (es2 != Acad::eOk) {
-			acrx_abort(_T("\nApp failed to close AcDbBlockTableRecord. Error: %s"), acadErrorStatusText(es2));
-		}
+	Acad::ErrorStatus es = pBlockTableRecord->newIterator(pIt);
+	if (es != Acad::eOk) {
 		return es;
 	}
+	std::unique_ptr<AcDbBlockTableRecordIterator> pIteratorScopedDeleter(pIt);
 	// Iterate through the Model Space records and retrieve the entities 
 	for (; !pIt->done(); pIt->step()) {
-		AcDbEntity* pEnt;
-		es = pIt->getEntity(pEnt);
+		AcDbObjectId entityId{ AcDbObjectId::kNull};
+		es = pIt->getEntityId(entityId);
 		if (es != Acad::eOk)
+			continue;
+		AcDbEntityPointer pEnt(entityId);
+		if (pEnt.openStatus() != Acad::eOk)
 			continue;
 		// pEnt successfully opened
 		AcDbBlockReference* pBlockRef = AcDbBlockReference::cast(pEnt);
-		if (pBlockRef == nullptr) { // release resources
-			Acad::ErrorStatus es2 = pEnt->close();
-			if (es2 != Acad::eOk) {
-				acrx_abort(_T("\nApp failed to close AcDbEntity. Error: %s"), acadErrorStatusText(es2));
-			}
+		if (nullptr == pBlockRef)
 			continue;
-		}
-		AcDbObjectId blockId{ pBlockRef->blockTableRecord() };
-		AcDbBlockTableRecord* pBlockTableRecord{ nullptr };
-		es = acdbOpenObject(pBlockTableRecord, blockId, AcDb::kForRead);
-		if (es != Acad::eOk) { // release resources
-			Acad::ErrorStatus es2 = pEnt->close();
-			if (es2 != Acad::eOk) {
-				acrx_abort(_T("\nApp failed to close AcDbEntity. Error: %s"), acadErrorStatusText(es2));
-			}
-			return es;
-		}
-		// pBlockTableRecord successfully opened
+		AcDbBlockTableRecordPointer pBlockTableRecord(pBlockRef->blockTableRecord());
+		if (pBlockTableRecord.openStatus() != Acad::eOk) 
+			continue;
 		// If the retrieved block reference entity is not an EMPLOYEE object, just return
-		const TCHAR* blockName;
-		es = pBlockTableRecord->getName(blockName);
-		if (es != Acad::eOk) { // TODO release resources
-			pBlockTableRecord->close();
-			pEnt->close();
-			return es;
-		}
-		pBlockTableRecord->close(); // TODO
-		if (_tcscmp(blockName, _T("EMPLOYEE"))) {
-			pEnt->close();
+		AcString sBlockName;
+		es = pBlockTableRecord->getName(sBlockName);
+		if (es != Acad::eOk) 
 			continue;
-		}
+		if (_tcscmp(sBlockName, _T("EMPLOYEE")))
+			continue;
 		// If the retrieved entity is an "EMPLOYEE" block reference, attach the global object reactor or if the parameter "attach" is false then remove the already attached object reactor
-
-		if (attach) {
-			pEnt->addReactor(pEmployeeReactor);
-		}
-		else {
-			pEnt->removeReactor(pEmployeeReactor);
-		}
-		pEnt->close();
+		if (attach)
+			pEnt->addReactor(g_pEmployeeReactor.get());
+		else
+			pEnt->removeReactor(g_pEmployeeReactor.get());
 	}
-	delete pIt;
-	pBlockTableRecord->close();
 	return Acad::eOk;
 }
 
 void detachAllEmployeeReactors()
 {
 	// Get an AcApDocumentIterator
-	AcApDocumentIterator* pIt = acDocManager->newAcApDocumentIterator();
+	std::unique_ptr<AcApDocumentIterator> pIt(acDocManager->newAcApDocumentIterator());
 	if (pIt == nullptr)
 		return;
 	// Store a pointer to the current document
@@ -132,7 +94,6 @@ void detachAllEmployeeReactors()
 		acDocManager->setCurDocument(pDoc);
 		attachEmployeeReactorToAllEmployee(false);
 	}
-	delete pIt;
 	// After iterating, reset the current document to be the one that was current before iterating
 	acDocManager->setCurDocument(pCurDoc, AcAp::kNone, Adesk::kFalse);
 }
@@ -143,19 +104,19 @@ AcApDataManager<CDocData> DocVars ;
 
 //-----------------------------------------------------------------------------
 //----- Implementation of the document data class.
-CDocData::CDocData () : m_editCommand(false), m_doRepositioning(false), m_DbEmployeeReactor(nullptr) {
+CDocData::CDocData () : m_bEditCommand(false), m_bDoRepositioning(false), m_pDbEmployeeReactor(nullptr) {
 	attachEmployeeReactorToAllEmployee(true);
 }
 
 //-----------------------------------------------------------------------------
 CDocData::CDocData (const CDocData &data) {
-	m_editCommand = false;
-	m_doRepositioning = false;
-	m_DbEmployeeReactor = nullptr;
+	m_bEditCommand = false;
+	m_bDoRepositioning = false;
+	m_pDbEmployeeReactor = nullptr;
 }
 
 //-----------------------------------------------------------------------------
 CDocData::~CDocData () {
-	if (m_DbEmployeeReactor) 
-		delete m_DbEmployeeReactor;
+	if (m_pDbEmployeeReactor) 
+		delete m_pDbEmployeeReactor;
 }

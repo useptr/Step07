@@ -2,8 +2,8 @@
 #include "StdAfx.h" 
 
 //Declaration of createBlockRecord():
-Acad::ErrorStatus createBlockRecord(const TCHAR* name);
+Acad::ErrorStatus CreateBlockRecord(const TCHAR* aszBlockTableRecordName);
 
-void printDbEvent(const AcDbObject* pObj, const TCHAR* pEvent);
+void PrintDbEvent(const AcDbObject* apObj, const TCHAR* apEvent);
 
-void printObj(const AcDbObject* pObj);
+void PrintObj(const AcDbObject* apObj);

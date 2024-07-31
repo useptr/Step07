@@ -25,6 +25,7 @@
 #include "StdAfx.h"
 #include "resource.h"
 #include "Tchar.h" // _T
+#include <memory>
 #include "utilities.h"
 #include "ADSKEdEmployeeReactor.h"
 #include "ADSKEmployeeReactor.h"
@@ -35,8 +36,8 @@
 //-----------------------------------------------------------------------------
 //----- ObjectARX EntryPoint
 
-ADSKEdEmployeeReactor* pEdEmployeeReactor = nullptr;
-ADSKEmployeeReactor* pEmployeeReactor = nullptr;
+std::unique_ptr<ADSKEdEmployeeReactor> g_pEdEmployeeReactor;
+std::unique_ptr <ADSKEmployeeReactor> g_pEmployeeReactor;
 
 class CS7App : public AcRxArxApp {
 
@@ -50,8 +51,8 @@ public:
 		AcRx::AppRetCode retCode =AcRxArxApp::On_kInitAppMsg (pkt) ;
 		
 		// TODO: Add your initialization code here
-		pEdEmployeeReactor = new ADSKEdEmployeeReactor(true);
-		pEmployeeReactor = new ADSKEmployeeReactor;
+		g_pEdEmployeeReactor = std::move(std::make_unique<ADSKEdEmployeeReactor>(true));
+		g_pEmployeeReactor = std::move(std::make_unique<ADSKEmployeeReactor>());
 
 		return (retCode) ;
 	}
@@ -64,8 +65,8 @@ public:
 
 		// TODO: Unload dependencies here
 		detachAllEmployeeReactors();
-		delete pEdEmployeeReactor;
-		delete pEmployeeReactor;
+		g_pEdEmployeeReactor.release();
+		g_pEmployeeReactor.release();
 
 		return (retCode) ;
 	}
@@ -73,7 +74,7 @@ public:
 	virtual AcRx::AppRetCode On_kLoadDwgMsg(void* pkt) {
 		AcRx::AppRetCode retCode = AcRxArxApp::On_kLoadDwgMsg(pkt);
 		// Create a new instance of  the database reactor for every new drawing
-		DocVars.docData().m_DbEmployeeReactor = new ADSKDbEmployeeReactor(acdbHostApplicationServices()->workingDatabase());
+		DocVars.docData().m_pDbEmployeeReactor = new ADSKDbEmployeeReactor(acdbHostApplicationServices()->workingDatabase());
 		return (retCode);
 	}
 
@@ -81,7 +82,7 @@ public:
 	}
 	
 	static void AsdkStep07_CREATE(void) {
-		if (createBlockRecord(_T("EMPLOYEE")) != Acad::eOk) {
+		if (CreateBlockRecord(_T("EMPLOYEE")) != Acad::eOk) {
 			acutPrintf(_T("\nERROR: Couldn't create block record"));
 			return;
 		}

@@ -36,33 +36,31 @@ ADSKEmployeeReactor::ADSKEmployeeReactor () : AcDbObjectReactor() {
 ADSKEmployeeReactor::~ADSKEmployeeReactor () {
 }
 
-void ADSKEmployeeReactor::openedForModify(const AcDbObject* dbObj) // This will occur before the actual transformation takes place
+void ADSKEmployeeReactor::openedForModify(const AcDbObject* pDbObj) // This will occur before the actual transformation takes place
 {
 	// If we are currently repositioning (m_doRepositioning == true) then return.
-	if (DocVars.docData().m_doRepositioning)
+	if (DocVars.docData().m_bDoRepositioning)
 		return;
 	// If none of the monitored commands is active (m_editCommand == false) then return
-	if (!DocVars.docData().m_editCommand)
+	if (!DocVars.docData().m_bEditCommand)
 		return;
 	// Verify that the AcDbObject passed in, is an AcDbBlockReference entity, if not return.
-	AcDbBlockReference* pBlockRef{ AcDbBlockReference::cast(dbObj) };
+	AcDbBlockReference* pBlockRef{ AcDbBlockReference::cast(pDbObj) };
 	if (pBlockRef == nullptr)
 		return;
 	// Retrieve the name of the AcDbBlockReference
-	AcDbObjectId blockTableRecordId{ pBlockRef->blockTableRecord() };
-	AcDbBlockTableRecord* pBlockTableRecord{ nullptr };
-	if (acdbOpenObject(pBlockTableRecord, blockTableRecordId, AcDb::kForRead) != Acad::eOk) { // 
+	AcDbBlockTableRecordPointer pBlockTableRecord(pBlockRef->blockTableRecord());
+	if (pBlockTableRecord.openStatus() != Acad::eOk) { // 
 		return;
 	}
-	// pBlockTableRecord sucessfully opened
+	AcString sBlockName;
 	// If it is not an EMPLOYEE block reference, just return.
-	const TCHAR* blockName{ nullptr };
-	pBlockTableRecord->getName(blockName);
-	pBlockTableRecord->close();
-	if (nullptr == blockName || _tcscmp(blockName, _T("EMPLOYEE")))
+	pBlockTableRecord->getName(sBlockName);
+	//pBlockTableRecord->close();
+	if (sBlockName.isEmpty() || _tcscmp(sBlockName, _T("EMPLOYEE")))
 		return;
 	// Store the position of the openedForModify() object in m_employeePositions 
-	DocVars.docData().m_employeePositions.append(pBlockRef->position());
+	DocVars.docData().m_aEmployeePositions.append(pBlockRef->position());
 	// Store the objectId of the openedForModify() object in m_changedObjects
-	DocVars.docData().m_changedObjects.append(pBlockRef->objectId());
+	DocVars.docData().m_aChangedObjects.append(pBlockRef->objectId());
 }

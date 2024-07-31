@@ -27,7 +27,7 @@
 #include "Tchar.h" // _T
 #include "ADSKEmployeeReactor.h"
 #include "utilities.h"
-extern ADSKEmployeeReactor* pEmployeeReactor;
+extern std::unique_ptr<ADSKEmployeeReactor> g_pEmployeeReactor;
 //-----------------------------------------------------------------------------
 ACRX_CONS_DEFINE_MEMBERS(ADSKDbEmployeeReactor, AcDbDatabaseReactor, 1)
 
@@ -66,30 +66,28 @@ bool ADSKDbEmployeeReactor::IsAttached () const {
 	return (mpDatabase != NULL) ;
 }
 
-void ADSKDbEmployeeReactor::objectAppended(const AcDbDatabase* dwg, const AcDbObject* dbObj)
+void ADSKDbEmployeeReactor::objectAppended(const AcDbDatabase*, const AcDbObject* apDbObj)
 {
 	// Check if the appended object is an AcDbBlockReference. If not return
-	AcDbBlockReference* pInsert = AcDbBlockReference::cast(dbObj);
-	if (nullptr == pInsert)
+	AcDbBlockReference* pBlockRef = AcDbBlockReference::cast(apDbObj);
+	if (nullptr == pBlockRef)
 		return;
 
 	//printDbEvent(dbObj, _T("objectAppended")); // log
 	acutPrintf(_T(" AcDbDatabaseReactor::objectAppended"));
 	//printObj(dbObj);
-
+	
 	// Get the block table record of the reference
-	AcDbObjectId blockId = pInsert->blockTableRecord();
-	AcDbBlockTableRecord* pBlockTableRecord{ nullptr };
-	if (acdbOpenObject(pBlockTableRecord, blockId, AcDb::kForRead) != Acad::eOk) {
+	AcDbBlockTableRecordPointer pBlockTableRecord(pBlockRef->blockTableRecord());
+	if (pBlockTableRecord.openStatus() != Acad::eOk) {
 		return;
 	}
 	// Get the name of the block table record
-	const TCHAR* blockName;
-	pBlockTableRecord->getName(blockName);
-	pBlockTableRecord->close();
-	//  check if it is an EMPLOYEE block reference.If not return
-	if (_tcscmp(blockName, _T("EMPLOYEE")))
+	AcString sBlockName;
+	pBlockTableRecord->getName(sBlockName);
+	//  check if it is an EMPLOYEE block reference. If not return
+	if (_tcscmp(sBlockName, _T("EMPLOYEE")))
 		return;
 	// Attach the AsdkEmployeeReactor object reactor to the appended block reference
-	dbObj->addReactor(pEmployeeReactor);
+	apDbObj->addReactor(g_pEmployeeReactor.get());
 }

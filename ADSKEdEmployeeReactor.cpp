@@ -69,47 +69,46 @@ bool ADSKEdEmployeeReactor::IsAttached () const {
 	return (mbAutoInitAndRelease) ;
 }
 
-void ADSKEdEmployeeReactor::commandWillStart(const ACHAR* cmdStr)
+void ADSKEdEmployeeReactor::commandWillStart(const ACHAR* aszCmdStr)
 {
 	// Check if one of the commands "MOVE", "ROTATE", "STRETCH", "SCALE" or "GRIP_STRETCH" is started 
-	if (_tcscmp(cmdStr, _T("MOVE")) && _tcscmp(cmdStr, _T("ROTATE")) && _tcscmp(cmdStr, _T("STRETCH")) && _tcscmp(cmdStr, _T("SCALE")) && _tcscmp(cmdStr, _T("GRIP_STRETCH"))) {
+	if (_tcscmp(aszCmdStr, _T("MOVE")) && _tcscmp(aszCmdStr, _T("ROTATE")) && _tcscmp(aszCmdStr, _T("STRETCH")) && _tcscmp(aszCmdStr, _T("SCALE")) && _tcscmp(aszCmdStr, _T("GRIP_STRETCH"))) {
 		return; // 
 	}
 
 	acutPrintf(_T("EdEmployeeReactor::commandWillStart editCommand")); // log
 	
 	// If it is one of the monitored commands, set m_editCommand = true; and m_doRepositioning = false;
-	DocVars.docData().m_editCommand = true;
-	DocVars.docData().m_doRepositioning = false;
+	DocVars.docData().m_bEditCommand = true;
+	DocVars.docData().m_bDoRepositioning = false;
 	// Reset any objectIds and position information 
-	DocVars.docData().m_changedObjects.setLogicalLength(0);
-	DocVars.docData().m_employeePositions.setLogicalLength(0);
+	DocVars.docData().m_aChangedObjects.setLogicalLength(0);
+	DocVars.docData().m_aEmployeePositions.setLogicalLength(0);
 }
 
-void ADSKEdEmployeeReactor::commandEnded(const ACHAR* cmdStr)
+void ADSKEdEmployeeReactor::commandEnded(const ACHAR*)
 {
 	// If the command being monitored is not a monitored command from the above list of commands then m_editCommand == false; simply return. 
-	if (!DocVars.docData().m_editCommand)
+	if (!DocVars.docData().m_bEditCommand)
 		return;
 
 	acutPrintf(_T("EdEmployeeReactor::commandEnded doRepositioning")); // log
 
 
 	// One of our monitored teams is active. Reset m_editCommand to false
-	DocVars.docData().m_editCommand = false;
+	DocVars.docData().m_bEditCommand = false;
 	// Set m_doRepositioning to true and start repositioning the moved objects 
-	DocVars.docData().m_doRepositioning = true;
-	for (int i : std::views::iota(0, DocVars.docData().m_changedObjects.length())) {
+	DocVars.docData().m_bDoRepositioning = true;
+	for (int i : std::views::iota(0, DocVars.docData().m_aChangedObjects.length())) {
 		// Open the entity
-		AcDbBlockReference* pBlockRef{ nullptr };
-		if (acdbOpenObject(pBlockRef, DocVars.docData().m_changedObjects.at(i), AcDb::kForWrite) != Acad::eOk)
+		AcDbObjectPointer<AcDbBlockReference> pBlockRef(DocVars.docData().m_aChangedObjects.at(i), AcDb::kForWrite);
+		if (pBlockRef.openStatus() != Acad::eOk)
 			continue; // TODO maybe need to do something
 		// If the actual position is different from the stored position, reposition the object 
 		AcGePoint3d finalPos = pBlockRef->position();
-		AcGePoint3d originalPos = DocVars.docData().m_employeePositions.at(i);
+		AcGePoint3d originalPos = DocVars.docData().m_aEmployeePositions.at(i);
 		if (finalPos != originalPos) {
 			pBlockRef->setPosition(originalPos);
 		}
-		pBlockRef->close();
 	}
 }
